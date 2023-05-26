@@ -4,16 +4,20 @@ from time import sleep
 
 import uvicorn
 
-from .routes import app
+from aciniformes_backend.routes.base import app
+from aciniformes_backend.scheduler import Scheduler
+from aciniformes_backend.settings import get_settings
+
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 
 def get_args():
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(dest='command')
-    run_api = subparsers.add_parser("run_api")
-    run_scheduller = subparsers.add_parser("run_scheduller")
+    parser.add_argument(
+        '-m', '--mode', choices=['run_api', 'run_scheduler'], help='Run mode.', required=True
+    )
     return parser.parse_args()
 
 
@@ -22,13 +26,15 @@ if __name__ == "__main__":
     args = get_args()
     logger.info(vars(args))
 
-    if args.command == 'run_api':
-        logger.info("Starting API")
-        uvicorn.run(app)
-        exit(0)
-
-    if args.command == 'run_scheduller':
-        logger.info("Starting Scheduller")
-        while True:
-            logger.info("PING!")
-            sleep(100)
+    match args.mode:
+        case 'run_api':
+            logger.info("Starting API")
+            uvicorn.run(app)
+            exit(0)
+        case 'run_scheduler':
+            logger.info("Starting Scheduler")
+            scheduler = Scheduler()
+            while True:
+                scheduler.update(settings.SCHEDULER_FREQUENCY_SEC)
+                # TODO Future возможно считать дельту выполнения update
+                sleep(settings.SCHEDULER_FREQUENCY_SEC)
